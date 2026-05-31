@@ -124,38 +124,22 @@ export default function Home() {
         updatedFrom: device
       };
 
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
+      // Appelle l'endpoint serverless pour sauvegarder sur Drive
+      const response = await fetch('/api/sync', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 1000,
-          messages: [
-            {
-              role: 'user',
-              content: `Sauvegarde ce fichier JSON dans Google Drive avec le nom "trail-coach-profile.json". Voici les données:
-
-${JSON.stringify(driveData, null, 2)}
-
-Confirme quand c'est fait.`
-            }
-          ],
-          mcp_servers: [
-            {
-              type: 'url',
-              url: 'https://drivemcp.googleapis.com/mcp/v1',
-              name: 'google-drive'
-            }
-          ]
+          action: 'upload',
+          data: driveData
         })
       });
 
       const data = await response.json();
       
       if (data.error) {
-        throw new Error(data.error.message);
+        throw new Error(data.error);
       }
 
       setSyncStatus('success');
@@ -173,39 +157,23 @@ Confirme quand c'est fait.`
     setSyncMessage('Récupération depuis Google Drive...');
 
     try {
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
+      const response = await fetch('/api/sync', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 2000,
-          messages: [
-            {
-              role: 'user',
-              content: `Récupère le fichier "trail-coach-profile.json" depuis Google Drive et retourne son contenu en JSON brut.`
-            }
-          ],
-          mcp_servers: [
-            {
-              type: 'url',
-              url: 'https://drivemcp.googleapis.com/mcp/v1',
-              name: 'google-drive'
-            }
-          ]
+          action: 'download'
         })
       });
 
       const data = await response.json();
-      const responseText = data.content[0].text;
 
-      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        throw new Error('Fichier non trouvé sur Drive');
+      if (data.error) {
+        throw new Error(data.error);
       }
 
-      const remoteData = JSON.parse(jsonMatch[0]);
+      const remoteData = data.data;
 
       const mergedConvs = mergeConversations(conversations, remoteData.conversations || []);
       setConversations(mergedConvs);
@@ -284,24 +252,23 @@ Sois direct, utile, scientifique mais accessible.`;
     setLoading(true);
 
     try {
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
+      // Appelle l'endpoint serverless
+      const response = await fetch('/api/coach', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 1500,
-          messages: [
-            {
-              role: 'user',
-              content: coachingPrompt(currentQuestion)
-            }
-          ]
+          prompt: coachingPrompt(currentQuestion)
         })
       });
 
       const data = await response.json();
+
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
       const coachResponse = data.content[0].text;
 
       const coachMsg = {
