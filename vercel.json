@@ -2,8 +2,5 @@
   "buildCommand": "next build",
   "outputDirectory": ".next",
   "devCommand": "next dev",
-  "framework": "nextjs",
-  "env": {
-    "NEXT_PUBLIC_API_URL": "@next-public-api-url"
-  }
+  "framework": "nextjs"
 }
